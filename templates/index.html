@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Web EPICS</title>
+
+    <link rel='stylesheet' href='{{ url_for("static", filename="css/style.css") }}' type='text/css'>
+
+    <script src='{{ url_for("static", filename="js/jquery.js") }}'></script>
+    <script src='{{ url_for("static", filename="js/socket.io.js") }}'></script>
+
+    <script>
+      var socket = io.connect()
+
+      socket.on('update', function(data) {
+        $('[data-pv="'+data.pv+'"]').html(data.value)
+      })
+
+      $(document).ready(function() {
+        $('form').submit(function(event) {
+          event.preventDefault()
+
+          var button = $(this).find('.join-button');
+          var pv = $(this).find('.pv-input').val();
+          var outputSpan = $(this).find('.pv-output');
+
+          if(button.attr('value') === 'Start') {
+            outputSpan.attr('data-pv', pv)
+            socket.emit('add monitor', {'pv': pv})
+            button.attr('value', 'Stop')
+          } else {
+            outputSpan.attr('data-pv', '').html('')
+            socket.emit('remove monitor', {'pv': pv})
+            button.attr('value', 'Start')
+          }
+
+        })
+      })
+    </script>
+  </head>
+  <body>
+    <form>
+      <input class='pv-input' value='SR11BCM01:CURRENT_MONITOR'>
+      <input type='submit' class='join-button' value='Start'>
+      <span class='pv-output' data-pv=''></span>
+    </form>
+    <form>
+      <input class='pv-input' value='SR11BCM01:SHORT_LIFETIME_MONITOR'>
+      <input type='submit' class='join-button' value='Start'>
+      <span class='pv-output' data-pv=''></span>
+    </form>
+    <form>
+      <input class='pv-input' value='SR01BPM01:SA_X_MONITOR'>
+      <input type='submit' class='join-button' value='Start'>
+      <span class='pv-output' data-pv=''></span>
+    </form>
+  </body>
+</html>
