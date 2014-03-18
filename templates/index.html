@@ -4,18 +4,54 @@
     <title>Web EPICS</title>
 
     <link rel='stylesheet' href='{{ url_for("static", filename="css/style.css") }}' type='text/css'>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <script src='{{ url_for("static", filename="js/jquery.js") }}'></script>
+    <script src='{{ url_for("static", filename="js/knockout.js") }}'></script>
     <script src='{{ url_for("static", filename="js/socket.io.js") }}'></script>
+    <script src='{{ url_for("static", filename="js/highcharts.js") }}'></script>
 
     <script>
+
+      function ViewModel() {
+        this.viewRange = ko.observable('all')
+      }
+      var viewModel = new ViewModel()
+
       var socket = io.connect()
 
+      var chart = null
       socket.on('update', function(data) {
         $('[data-pv="'+data.pv+'"]').html(data.value)
+        var series = chart.get(data.pv)
+        if(series) {
+          series.addPoint([data.time, data.value])
+          if(series.data.length > 100) {
+            series.data[0].remove()
+          }
+        } else {
+          chart.addSeries({
+            id: data.pv,
+            name: data.pv,
+            data: [[data.time, data.value]]
+          })
+        }
       })
 
+      function setXAxisRange() {
+        if(viewModel.viewRange() !== 'all') {
+          var low = (new Date()).getTime() / 1000. - parseInt(viewModel.viewRange())
+          chart.xAxis[0].setExtremes(low)
+        } else {
+          chart.xAxis[0].setExtremes()
+        }
+        setTimeout(setXAxisRange, 1000)
+      }
+
       $(document).ready(function() {
+
+        ko.applyBindings(viewModel)
+
         $('form').submit(function(event) {
           event.preventDefault()
 
@@ -34,7 +70,18 @@
           }
 
         })
+
+        chart = $('#chart').highcharts({
+          title: null,
+          chart: {
+            animation: false
+          }
+        }).highcharts()
+
+        setXAxisRange()
+
       })
+
     </script>
   </head>
   <body>
@@ -53,5 +100,25 @@
       <input type='submit' class='join-button' value='Start'>
       <span class='pv-output' data-pv=''></span>
     </form>
+    <div id='chart'>
+    </div>
+    <div>
+      <label>
+        <input type='radio' name='view-range' value='all' data-bind='checked: viewRange'>
+        All
+      </label>
+      <label>
+        <input type='radio' name='view-range' value='300' data-bind='checked: viewRange'>
+        5 min
+      </label>
+      <label>
+        <input type='radio' name='view-range' value='60' data-bind='checked: viewRange'>
+        1 min
+      </label>
+      <label>
+        <input type='radio' name='view-range' value='30' data-bind='checked: viewRange'>
+        30 sec
+      </label>
+    </div>
   </body>
 </html>

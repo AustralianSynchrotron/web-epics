@@ -3,6 +3,7 @@ from flask.ext.socketio import SocketIO, emit, join_room, leave_room
 from epics import PV
 from epics.ca import CASeverityException
 from collections import defaultdict
+import time
 
 app = Flask(__name__)
 app.config.from_pyfile('app.cfg')
@@ -14,7 +15,8 @@ socketio = SocketIO(app)
 pv_lookup = {}
 
 def pv_changed(pvname, value, **kws):
-    socketio.emit('update', {'pv': pvname, 'value': value}, room=pvname)
+    data = {'pv': pvname, 'value': value, 'time': time.time()}
+    socketio.emit('update', data, room=pvname)
 
 @app.route('/')
 def index():
@@ -70,4 +72,4 @@ def remove_monitor(data):
         del pv_lookup[pvname]
 
 if __name__ == '__main__':
-    socketio.run(app)
+    socketio.run(app, host='0.0.0.0', port=80)
