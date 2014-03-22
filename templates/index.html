@@ -77,14 +77,29 @@
 
       function ViewModel() {
         var self = this
-        self.editing = ko.observable(false)
-        self.chartRange = ko.observable('30000')
-        self.logAxis = ko.observable(false)
+        self.editing = ko.observable({{ 'true' if pvs == [] else 'false' }})
+        self.logAxis = ko.observable({{ 'true' if log else 'false' }})
+        var defaultChartRange = '30000'
+        self.chartRange = ko.observable({{ chartRange or 'defaultChartRange' }})
         self.logAxis.subscribe(function(logAxis) {
           var type = logAxis ? 'logarithmic' : 'linear'
           chart.yAxis[0].update({type: type})
         })
-        self.pvs = ko.observableArray([ ])
+        self.pvs = ko.observableArray([])
+        self.url = ko.computed(function() {
+          var args = [] 
+          if (self.pvs().length) {
+            args.push('pvs=' + encodeURIComponent(ko.utils.arrayMap(self.pvs(), function(pv) { return pv.name() }).join(',')))
+          }
+          if (self.chartRange() !== defaultChartRange && self.chartRange() !== 'freeze') {
+            args.push('range=' + self.chartRange())
+          }
+          if (self.logAxis()) {
+            args.push('log=1')
+          }
+          if (args.length === 0) return ''
+          return '?' + args.join('&')
+        })
         self.pvToAdd = ko.observable('')
         self.pvWithName = function(name) {
           return ko.utils.arrayFirst(self.pvs(), function(pv) { return pv.name() === name })
@@ -139,7 +154,7 @@
       $(document).ready(function() {
 
         ko.applyBindings(viewModel)
-
+        
         $('#start-edit-button').click(function() { viewModel.editing(true) } )
         $('#end-edit-button').click(function() { viewModel.editing(false) } )
 
@@ -156,9 +171,13 @@
           }
         }).highcharts()
 
-        viewModel.pvs.push(new PV('SR11BCM01:CURRENT_MONITOR'))
-        viewModel.pvs.push(new PV('SR11BCM01:SHORT_LIFETIME_MONITOR'))
-        viewModel.pvs.push(new PV('SR03IPC03:CHAN01_PRESSURE_MONITOR'))
+        {% for name in pvs %}
+          viewModel.pvs.push(new PV('{{ name }}'))
+        {% endfor %}
+
+        viewModel.url.subscribe(function(url) {
+          window.history.pushState('', '', url)
+        })
 
         setXAxisRange()
 
@@ -209,6 +228,9 @@
           Logarithmic
         </label>
       </div>
+      <footer>
+        <a data-bind='attr: {href: url}'>Link to this chart</a>
+      </footer>
     </div>
   </body>
 </html>

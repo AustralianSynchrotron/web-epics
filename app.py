@@ -20,7 +20,11 @@ def pv_changed(pvname, value, **kws):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    pvs_arg = request.args.get('pvs')
+    pvs = [] if not pvs_arg else pvs_arg.split(',')
+    log = request.args.get('log') == '1'
+    chartRange = request.args.get('range')
+    return render_template('index.html', pvs=pvs, log=log, chartRange=chartRange)
 
 @socketio.on('add monitor')
 def add_monitor(data):
