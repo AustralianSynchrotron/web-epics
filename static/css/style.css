@@ -21,7 +21,13 @@ footer {
 }
 
 button {
-  font-size: 15px;
+  font-size: 16px;
+}
+
+@media (max-width: 800px) {
+  button {
+    font-size: 13px;
+  }
 }
 
 .container {
@@ -37,8 +43,8 @@ button {
 
 .pv-input {
   font-family: Inconsolata;
-  font-size: 16px;
-  padding: 2px 3px; /* Needed to stop boxes growing with font-size on iOS */
+  font-size: 16px; /* Needs to be at least 16px to prevent iOS autozoom */
+  padding: 2px 3px;
   width: 70%;
   text-overflow: ellipsis;
   float: left;

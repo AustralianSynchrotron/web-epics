@@ -168,6 +168,13 @@
           },
           yAxis: {
             labels: { formatter: function() { return this.value } }
+          },
+          tooltip: {
+            formatter: function() {
+              return '<span style="font-size: 10px">' + Highcharts.dateFormat('%H:%M:%S', this.x) + '</span><br/>' +
+                '<span style="color:' + this.series.color + '">' + this.series.name + '</span>: ' +
+                '<b>'+ this.y.toPrecision(6) +'</b>'
+            }
           }
         }).highcharts()
 
@@ -192,7 +199,7 @@
         <div class='clearfix'>
           <input type='text' class='pv-input' data-bind='value: name, enable: $parent.editing'/>
           <input class='pv-value' disabled data-bind='value: value, visible: !$parent.editing()' />
-          <button class='pv-button' data-bind='click: $parent.removePV, visible: $parent.editing'>Del</button>
+          <button class='pv-button' data-bind='click: $parent.removePV, visible: $parent.editing'>Remove</button>
         </div>
       </div>
       <form class='clearfix' data-bind='submit: addPV, visible: editing'>
