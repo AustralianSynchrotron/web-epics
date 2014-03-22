@@ -13,6 +13,12 @@
 
     <script>
 
+      Highcharts.setOptions({
+        global: {
+          timezoneOffset: (new Date()).getTimezoneOffset()
+        }
+      })
+
       ko.extenders.precision = function(target, precisions) {
           var result = ko.dependentObservable({
             read: function() {
@@ -109,11 +115,10 @@
         }
         var series = chart.get(data.pv)
         if(series) {
-          series.addPoint([data.time, data.value])
-          if(series.data.length > 100) {
+          series.addPoint([1000 * data.time, data.value])
+          if(series.data.length > 300) {
             series.data[0].remove()
           }
-        } else {
         }
       })
 
@@ -125,8 +130,8 @@
           var currentExtremes = axis.getExtremes()
           axis.setExtremes(currentExtremes.min, currentExtremes.max)
         } else {
-          var now = (new Date()).getTime() / 1000.
-          var low = now - parseInt(viewModel.chartRange())
+          var now = (new Date()).getTime()
+          var low = now - viewModel.chartRange()
           axis.setExtremes(low, now)
         }
         setTimeout(setXAxisRange, 1000)
@@ -143,6 +148,9 @@
           title: null,
           chart: {
             animation: false
+          },
+          xAxis: {
+            type: 'datetime'
           },
           yAxis: {
             labels: { formatter: function() { return this.value } }
@@ -184,15 +192,15 @@
           All
         </label>
         <label>
-          <input type='radio' name='chart-range' value='300' data-bind='checked: chartRange'>
+          <input type='radio' name='chart-range' value='300000' data-bind='checked: chartRange'>
           5 min
         </label>
         <label>
-          <input type='radio' name='chart-range' value='60' data-bind='checked: chartRange'>
+          <input type='radio' name='chart-range' value='60000' data-bind='checked: chartRange'>
           1 min
         </label>
         <label>
-          <input type='radio' name='chart-range' value='30' data-bind='checked: chartRange'>
+          <input type='radio' name='chart-range' value='30000' data-bind='checked: chartRange'>
           30 sec
         </label>
         <label>
