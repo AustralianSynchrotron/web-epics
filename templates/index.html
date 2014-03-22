@@ -13,16 +13,73 @@
 
     <script>
 
-      function ViewModel() {
-        this.viewRange = ko.observable('all')
+      var socket = io.connect()
+      var chart = null
+
+      function PV(name) {
+        var self = this
+        self.name = ko.observable(name)
+        self.value = ko.observable(null)
+        self.addToChart = function() {
+          chart.addSeries({
+            id: self.name(),
+            name: self.name(),
+            data: []
+          })
+        }
+        self.removeFromChart = function() {
+          var series = chart.get(this.name())
+          if(series) {
+            series.remove()
+          }
+        }
+        self.name.subscribe(function(newName) {
+          self.addToChart()
+          socket.emit('add monitor', {'pv': newName})
+        })
+        self.name.subscribe(function(oldName) {
+          socket.emit('remove monitor', {'pv': oldName})
+          self.removeFromChart()
+        }, this, 'beforeChange')
+        self.removeMonitor = function() {
+          socket.emit('remove monitor', {'pv': self.name()})
+        }
+        self.addToChart()
+        socket.emit('add monitor', {'pv': name})
       }
+
+      function ViewModel() {
+        var self = this
+        self.chartRange = ko.observable('all')
+        self.pvs = ko.observableArray([ ])
+        self.pvToAdd = ko.observable('')
+        self.pvWithName = function(name) {
+          return ko.utils.arrayFirst(self.pvs(), function(pv) { return pv.name() === name })
+        }
+        self.addPV = function() {
+          var name = self.pvToAdd().trim()
+          if (!name.length) return;
+          if (self.pvWithName(name)) {
+            alert('PV already added.')
+            return
+          }
+          self.pvs.push(new PV(name))
+          self.pvToAdd('')
+        }
+        self.removePV = function() {
+          this.removeMonitor()
+          this.removeFromChart()
+          self.pvs.remove(this)
+        }
+      }
+
       var viewModel = new ViewModel()
 
-      var socket = io.connect()
-
-      var chart = null
       socket.on('update', function(data) {
-        $('[data-pv="'+data.pv+'"]').html(data.value)
+        var pv = viewModel.pvWithName(data.pv)
+        if (pv) {
+          pv.value(data.value)
+        }
         var series = chart.get(data.pv)
         if(series) {
           series.addPoint([data.time, data.value])
@@ -30,46 +87,41 @@
             series.data[0].remove()
           }
         } else {
-          chart.addSeries({
-            id: data.pv,
-            name: data.pv,
-            data: [[data.time, data.value]]
-          })
         }
       })
 
       function setXAxisRange() {
-        if(viewModel.viewRange() !== 'all') {
-          var low = (new Date()).getTime() / 1000. - parseInt(viewModel.viewRange())
-          chart.xAxis[0].setExtremes(low)
+        var axis = chart.xAxis[0]
+        if(viewModel.chartRange() === 'all') {
+          axis.setExtremes()
+        } else if (viewModel.chartRange() === 'freeze') {
+          var currentExtremes = axis.getExtremes()
+          axis.setExtremes(currentExtremes.min, currentExtremes.max)
         } else {
-          chart.xAxis[0].setExtremes()
+          var now = (new Date()).getTime() / 1000.
+          var low = now - parseInt(viewModel.chartRange())
+          axis.setExtremes(low, now)
         }
         setTimeout(setXAxisRange, 1000)
+      }
+
+      function setEditing(editing) {
+        if(editing) {
+          $('.viewing').hide()
+          $('.editting').show()
+        } else {
+          $('.editting').hide()
+          $('.viewing').show()
+        }
+        $('.pv-input').prop('disabled', !editing)
       }
 
       $(document).ready(function() {
 
         ko.applyBindings(viewModel)
 
-        $('form').submit(function(event) {
-          event.preventDefault()
-
-          var button = $(this).find('.join-button');
-          var pv = $(this).find('.pv-input').val();
-          var outputSpan = $(this).find('.pv-output');
-
-          if(button.attr('value') === 'Start') {
-            outputSpan.attr('data-pv', pv)
-            socket.emit('add monitor', {'pv': pv})
-            button.attr('value', 'Stop')
-          } else {
-            outputSpan.attr('data-pv', '').html('')
-            socket.emit('remove monitor', {'pv': pv})
-            button.attr('value', 'Start')
-          }
-
-        })
+        $('#start-edit-button').click(function() { setEditing(true) } )
+        $('#end-edit-button').click(function() { setEditing(false) } )
 
         chart = $('#chart').highcharts({
           title: null,
@@ -78,6 +130,10 @@
           }
         }).highcharts()
 
+        viewModel.pvs.push(new PV('SR11BCM01:CURRENT_MONITOR'))
+        viewModel.pvs.push(new PV('SR11BCM01:SHORT_LIFETIME_MONITOR'))
+        setEditing(false)
+
         setXAxisRange()
 
       })
@@ -85,40 +141,46 @@
     </script>
   </head>
   <body>
-    <form>
-      <input class='pv-input' value='SR11BCM01:CURRENT_MONITOR'>
-      <input type='submit' class='join-button' value='Start'>
-      <span class='pv-output' data-pv=''></span>
-    </form>
-    <form>
-      <input class='pv-input' value='SR11BCM01:SHORT_LIFETIME_MONITOR'>
-      <input type='submit' class='join-button' value='Start'>
-      <span class='pv-output' data-pv=''></span>
-    </form>
-    <form>
-      <input class='pv-input' value='SR01BPM01:SA_X_MONITOR'>
-      <input type='submit' class='join-button' value='Start'>
-      <span class='pv-output' data-pv=''></span>
-    </form>
-    <div id='chart'>
-    </div>
-    <div>
-      <label>
-        <input type='radio' name='view-range' value='all' data-bind='checked: viewRange'>
-        All
-      </label>
-      <label>
-        <input type='radio' name='view-range' value='300' data-bind='checked: viewRange'>
-        5 min
-      </label>
-      <label>
-        <input type='radio' name='view-range' value='60' data-bind='checked: viewRange'>
-        1 min
-      </label>
-      <label>
-        <input type='radio' name='view-range' value='30' data-bind='checked: viewRange'>
-        30 sec
-      </label>
+    <div class='container'>
+
+      <div data-bind='foreach: pvs'>
+        <div class='clearfix'>
+          <input type='text' class='pv-input' data-bind='value: name'/>
+          <input class='pv-value viewing' disabled hidden data-bind='value: value' />
+          <button class='pv-button editting' data-bind='click: $parent.removePV'>Del</button>
+        </div>
+      </div>
+      <form class='editting clearfix' data-bind='submit: addPV'>
+        <input type='text' class='pv-input' data-bind='value: pvToAdd'/>
+        <button type='submit' class='pv-button'>Add</button>
+      </form>
+      <div class='wide-button-container'>
+        <button id='end-edit-button' class='wide-button editting'>Done</button>
+        <button id='start-edit-button' class='wide-button viewing'>Edit PVs</button>
+      </div>
+      <div id='chart'></div>
+      <div>
+        <label>
+          <input type='radio' name='view-range' value='all' data-bind='checked: chartRange'>
+          All
+        </label>
+        <label>
+          <input type='radio' name='view-range' value='300' data-bind='checked: chartRange'>
+          5 min
+        </label>
+        <label>
+          <input type='radio' name='view-range' value='60' data-bind='checked: chartRange'>
+          1 min
+        </label>
+        <label>
+          <input type='radio' name='view-range' value='30' data-bind='checked: chartRange'>
+          30 sec
+        </label>
+        <label>
+          <input type='radio' name='view-range' value='freeze' data-bind='checked: chartRange'>
+          Freeze
+        </label>
+      </div>
     </div>
   </body>
 </html>

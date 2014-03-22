@@ -1,7 +1,72 @@
+@font-face {
+  font-family: 'Inconsolata';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Inconsolata'), url(Inconsolata.woff) format('woff');
+}
+
+@font-face {
+  font-family: 'Inconsolata';
+  font-style: normal;
+  font-weight: 700;
+  src: local('Inconsolata Bold'), local('Inconsolata-Bold'), url(Inconsolata-Bold.woff) format('woff');
+}
+
 body {
-  font-size: 20px;
+  font-family: Inconsolata;
+}
+
+button {
+  font-size: 15px;
+}
+
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.clearfix:after {
+  content: "";
+  display: table;
+  clear: both;
 }
 
 .pv-input {
-  width: 70%;
+  font-family: Inconsolata;
+  font-size: 16px;
+  padding: 2px 3px; /* Needed to stop boxes growing with font-size on iOS */
+  width: 75%;
+  text-overflow: ellipsis;
+  float: left;
+}
+
+.pv-input:disabled, .pv-value:disabled {
+  color: black;
+  background-color: transparent;
+  border-color: transparent;
+  opacity: 1.0;
+  -webkit-text-fill-color: black;
+}
+
+.pv-value {
+  font-family: Inconsolata;
+  font-size: 16px;
+  padding: 2px 0;
+
+  /*display: inline-block;*/
+  width: 20%;
+  text-align: right;
+}
+
+.pv-button {
+  width: 20%;
+  float: right;
+}
+
+.wide-button-container {
+  text-align: center;
+}
+
+.wide-button {
+  width: 100%;
 }
