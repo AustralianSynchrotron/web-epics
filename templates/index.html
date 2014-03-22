@@ -13,13 +13,34 @@
 
     <script>
 
+      ko.extenders.precision = function(target, precisions) {
+          var result = ko.dependentObservable({
+            read: function() {
+              var value = target()
+              if (value === null) {
+                return ''
+              }
+              var precision
+              if (value.toString() === value.toExponential()) {
+                precision = precisions.exponential
+              } else {
+                precision = precisions.float
+              }
+              return target().toPrecision(precision)
+            },
+            write: target
+          })
+          result.raw = target
+          return result
+      }
+
       var socket = io.connect()
       var chart = null
 
       function PV(name) {
         var self = this
         self.name = ko.observable(name)
-        self.value = ko.observable(null)
+        self.value = ko.observable(null).extend({precision: {float: 8, exponential: 4}})
         self.addToChart = function() {
           chart.addSeries({
             id: self.name(),
@@ -50,7 +71,13 @@
 
       function ViewModel() {
         var self = this
+        self.editing = ko.observable(false)
         self.chartRange = ko.observable('all')
+        self.logAxis = ko.observable(false)
+        self.logAxis.subscribe(function(logAxis) {
+          var type = logAxis ? 'logarithmic' : 'linear'
+          chart.yAxis[0].update({type: type})
+        })
         self.pvs = ko.observableArray([ ])
         self.pvToAdd = ko.observable('')
         self.pvWithName = function(name) {
@@ -58,7 +85,7 @@
         }
         self.addPV = function() {
           var name = self.pvToAdd().trim()
-          if (!name.length) return;
+          if (!name.length) return
           if (self.pvWithName(name)) {
             alert('PV already added.')
             return
@@ -105,34 +132,26 @@
         setTimeout(setXAxisRange, 1000)
       }
 
-      function setEditing(editing) {
-        if(editing) {
-          $('.viewing').hide()
-          $('.editting').show()
-        } else {
-          $('.editting').hide()
-          $('.viewing').show()
-        }
-        $('.pv-input').prop('disabled', !editing)
-      }
-
       $(document).ready(function() {
 
         ko.applyBindings(viewModel)
 
-        $('#start-edit-button').click(function() { setEditing(true) } )
-        $('#end-edit-button').click(function() { setEditing(false) } )
+        $('#start-edit-button').click(function() { viewModel.editing(true) } )
+        $('#end-edit-button').click(function() { viewModel.editing(false) } )
 
         chart = $('#chart').highcharts({
           title: null,
           chart: {
             animation: false
+          },
+          yAxis: {
+            labels: { formatter: function() { return this.value } }
           }
         }).highcharts()
 
         viewModel.pvs.push(new PV('SR11BCM01:CURRENT_MONITOR'))
         viewModel.pvs.push(new PV('SR11BCM01:SHORT_LIFETIME_MONITOR'))
-        setEditing(false)
+        viewModel.pvs.push(new PV('SR03IPC03:CHAN01_PRESSURE_MONITOR'))
 
         setXAxisRange()
 
@@ -145,40 +164,46 @@
 
       <div data-bind='foreach: pvs'>
         <div class='clearfix'>
-          <input type='text' class='pv-input' data-bind='value: name'/>
-          <input class='pv-value viewing' disabled hidden data-bind='value: value' />
-          <button class='pv-button editting' data-bind='click: $parent.removePV'>Del</button>
+          <input type='text' class='pv-input' data-bind='value: name, enable: $parent.editing'/>
+          <input class='pv-value' disabled data-bind='value: value, visible: !$parent.editing()' />
+          <button class='pv-button' data-bind='click: $parent.removePV, visible: $parent.editing'>Del</button>
         </div>
       </div>
-      <form class='editting clearfix' data-bind='submit: addPV'>
+      <form class='clearfix' data-bind='submit: addPV, visible: editing'>
         <input type='text' class='pv-input' data-bind='value: pvToAdd'/>
         <button type='submit' class='pv-button'>Add</button>
       </form>
       <div class='wide-button-container'>
-        <button id='end-edit-button' class='wide-button editting'>Done</button>
-        <button id='start-edit-button' class='wide-button viewing'>Edit PVs</button>
+        <button id='end-edit-button' class='wide-button' data-bind='visible: editing'>Done</button>
+        <button id='start-edit-button' class='wide-button' data-bind='visible: !editing()'>Edit PVs</button>
       </div>
       <div id='chart'></div>
       <div>
         <label>
-          <input type='radio' name='view-range' value='all' data-bind='checked: chartRange'>
+          <input type='radio' name='chart-range' value='all' data-bind='checked: chartRange'>
           All
         </label>
         <label>
-          <input type='radio' name='view-range' value='300' data-bind='checked: chartRange'>
+          <input type='radio' name='chart-range' value='300' data-bind='checked: chartRange'>
           5 min
         </label>
         <label>
-          <input type='radio' name='view-range' value='60' data-bind='checked: chartRange'>
+          <input type='radio' name='chart-range' value='60' data-bind='checked: chartRange'>
           1 min
         </label>
         <label>
-          <input type='radio' name='view-range' value='30' data-bind='checked: chartRange'>
+          <input type='radio' name='chart-range' value='30' data-bind='checked: chartRange'>
           30 sec
         </label>
         <label>
-          <input type='radio' name='view-range' value='freeze' data-bind='checked: chartRange'>
+          <input type='radio' name='chart-range' value='freeze' data-bind='checked: chartRange'>
           Freeze
+        </label>
+      </div>
+      <div>
+        <label>
+          <input type='checkbox' data-bind='checked: logAxis'>
+          Logarithmic
         </label>
       </div>
     </div>
