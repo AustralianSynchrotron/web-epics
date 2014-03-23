@@ -130,9 +130,13 @@
         }
         var series = chart.get(data.pv)
         if(series) {
-          series.addPoint([1000 * data.time, data.value])
-          if(series.data.length > 300) {
-            series.data[0].remove()
+          var newPointTime = 1000 * data.time
+          var pointCount = series.xData.length
+          // We limit each series to 300 points to keep the chart responsive.
+          // We require at least 1000 ms between points so that 300 points
+          // will be enough to cover the largest allowed span (5 minutes).
+          if (pointCount === 0 || newPointTime - series.xData[pointCount-1] > 1000) {
+            series.addPoint([newPointTime, data.value], true, pointCount >= 300)
           }
         }
       })
