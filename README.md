@@ -10,6 +10,7 @@ Installation
 git clone https://github.com/AustralianSynchrotron/web-epics
 cd web-epics
 pip install -r requirements.txt
+cp app.example.cfg app.cfg
 python app.py
 ```
 
