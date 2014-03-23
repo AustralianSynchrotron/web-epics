@@ -23,8 +23,8 @@ def index():
     pvs_arg = request.args.get('pvs')
     pvs = [] if not pvs_arg else pvs_arg.split(',')
     log = request.args.get('log') == '1'
-    chartRange = request.args.get('range')
-    return render_template('index.html', pvs=pvs, log=log, chartRange=chartRange)
+    span = request.args.get('span')
+    return render_template('index.html', pvs=pvs, log=log, span=span)
 
 @socketio.on('add monitor')
 def add_monitor(data):

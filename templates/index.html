@@ -79,8 +79,8 @@
         var self = this
         self.editing = ko.observable({{ 'true' if pvs == [] else 'false' }})
         self.logAxis = ko.observable({{ 'true' if log else 'false' }})
-        var defaultChartRange = '30'
-        self.chartRange = ko.observable({% if chartRange %}'{{ chartRange }}'{% else %}defaultChartRange{% endif %})
+        var defaultChartSpan = '30'
+        self.chartSpan = ko.observable({% if span %}'{{ span }}'{% else %}defaultChartSpan{% endif %})
         self.logAxis.subscribe(function(logAxis) {
           var type = logAxis ? 'logarithmic' : 'linear'
           chart.yAxis[0].update({type: type})
@@ -91,8 +91,8 @@
           if (self.pvs().length) {
             args.push('pvs=' + encodeURIComponent(ko.utils.arrayMap(self.pvs(), function(pv) { return pv.name() }).join(',')))
           }
-          if (self.chartRange() !== defaultChartRange && self.chartRange() !== 'freeze') {
-            args.push('range=' + self.chartRange())
+          if (self.chartSpan() !== defaultChartSpan && self.chartSpan() !== 'freeze') {
+            args.push('span=' + self.chartSpan())
           }
           if (self.logAxis()) {
             args.push('log=1')
@@ -130,7 +130,7 @@
         }
         var series = chart.get(data.pv)
         if(series) {
-          var newPointTime = 1000 * data.time
+          var newPointTime = (new Date()).getTime()
           var pointCount = series.xData.length
           // We limit each series to 300 points to keep the chart responsive.
           // We require at least 1000 ms between points so that 300 points
@@ -142,17 +142,18 @@
       })
 
       function setXAxisRange() {
-        var axis = chart.xAxis[0]
-        var currentExtremes = axis.getExtremes()
-        if (viewModel.chartRange() === 'freeze') {
-          axis.setExtremes(currentExtremes.min, currentExtremes.max)
+        var axis = chart.xAxis[0], min, max
+        if (viewModel.chartSpan() === 'freeze') {
+          var currentExtremes = axis.getExtremes()
+          min = currentExtremes.min
+          max = currentExtremes.max
         } else {
-          var padding = 1500
-          var now = Math.max((new Date()).getTime(), currentExtremes.dataMax)
-          var range = viewModel.chartRange() * 1000 // Seconds to milliseconds
-          var low = now - range - padding
-          axis.setExtremes(low, now + padding)
+          var now = (new Date()).getTime()
+          min = now - viewModel.chartSpan() * 1000
+          // We pad the max with 1000 ms so new points always display on the chart
+          max = now + 1000
         }
+        axis.setExtremes(min, max)
         setTimeout(setXAxisRange, 1000)
       }
 
@@ -219,19 +220,19 @@
       <div id='chart'></div>
       <div>
         <label>
-          <input type='radio' name='chart-range' value='300' data-bind='checked: chartRange'>
+          <input type='radio' name='chart-span' value='300' data-bind='checked: chartSpan'>
           5 min
         </label>
         <label>
-          <input type='radio' name='chart-range' value='60' data-bind='checked: chartRange'>
+          <input type='radio' name='chart-span' value='60' data-bind='checked: chartSpan'>
           1 min
         </label>
         <label>
-          <input type='radio' name='chart-range' value='30' data-bind='checked: chartRange'>
+          <input type='radio' name='chart-span' value='30' data-bind='checked: chartSpan'>
           30 sec
         </label>
         <label>
-          <input type='radio' name='chart-range' value='freeze' data-bind='checked: chartRange'>
+          <input type='radio' name='chart-span' value='freeze' data-bind='checked: chartSpan'>
           Pause
         </label>
       </div>
