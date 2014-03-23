@@ -79,8 +79,8 @@
         var self = this
         self.editing = ko.observable({{ 'true' if pvs == [] else 'false' }})
         self.logAxis = ko.observable({{ 'true' if log else 'false' }})
-        var defaultChartRange = '30000'
-        self.chartRange = ko.observable({{ chartRange or 'defaultChartRange' }})
+        var defaultChartRange = '30'
+        self.chartRange = ko.observable({% if chartRange %}'{{ chartRange }}'{% else %}defaultChartRange{% endif %})
         self.logAxis.subscribe(function(logAxis) {
           var type = logAxis ? 'logarithmic' : 'linear'
           chart.yAxis[0].update({type: type})
@@ -97,7 +97,7 @@
           if (self.logAxis()) {
             args.push('log=1')
           }
-          if (args.length === 0) return ''
+          if (args.length === 0) return '/'
           return '?' + args.join('&')
         })
         self.pvToAdd = ko.observable('')
@@ -145,7 +145,8 @@
         } else {
           var padding = 1500
           var now = Math.max((new Date()).getTime(), currentExtremes.dataMax)
-          var low = now - viewModel.chartRange() - padding
+          var range = viewModel.chartRange() * 1000 // Seconds to milliseconds
+          var low = now - range - padding
           axis.setExtremes(low, now + padding)
         }
         setTimeout(setXAxisRange, 1000)
@@ -175,7 +176,8 @@
                 '<span style="color:' + this.series.color + '">' + this.series.name + '</span>: ' +
                 '<b>'+ this.y.toPrecision(6) +'</b>'
             }
-          }
+          },
+          credits: { enabled: false }
         }).highcharts()
 
         {% for name in pvs %}
@@ -213,15 +215,15 @@
       <div id='chart'></div>
       <div>
         <label>
-          <input type='radio' name='chart-range' value='300000' data-bind='checked: chartRange'>
+          <input type='radio' name='chart-range' value='300' data-bind='checked: chartRange'>
           5 min
         </label>
         <label>
-          <input type='radio' name='chart-range' value='60000' data-bind='checked: chartRange'>
+          <input type='radio' name='chart-range' value='60' data-bind='checked: chartRange'>
           1 min
         </label>
         <label>
-          <input type='radio' name='chart-range' value='30000' data-bind='checked: chartRange'>
+          <input type='radio' name='chart-range' value='30' data-bind='checked: chartRange'>
           30 sec
         </label>
         <label>
