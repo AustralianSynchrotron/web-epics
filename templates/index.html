@@ -173,7 +173,8 @@
             type: 'datetime'
           },
           yAxis: {
-            labels: { formatter: function() { return this.value } }
+            labels: { formatter: function() { return this.value } },
+            type: viewModel.logAxis() ? 'logarithmic' : 'linear'
           },
           tooltip: {
             formatter: function() {
@@ -214,7 +215,7 @@
         <button type='submit' class='pv-button'>Add</button>
       </form>
       <div class='wide-button-container'>
-        <button id='end-edit-button' class='wide-button' data-bind='visible: editing'>Done</button>
+        <button id='end-edit-button' class='wide-button' data-bind='visible: editing'>Save PVs</button>
         <button id='start-edit-button' class='wide-button' data-bind='visible: !editing()'>Edit PVs</button>
       </div>
       <div id='chart'></div>
