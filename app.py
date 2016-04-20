@@ -1,9 +1,11 @@
-from flask import Flask, request, session, render_template
-from flask.ext.socketio import SocketIO, emit, join_room, leave_room
-from epics import PV
-from epics.ca import CASeverityException
 from collections import defaultdict
 import time
+
+from flask import Flask, request, session, render_template
+from flask.ext.socketio import SocketIO, join_room, leave_room
+from epics import PV
+from epics.ca import CASeverityException
+
 
 app = Flask(__name__)
 app.config.from_pyfile('app.cfg')
@@ -14,9 +16,11 @@ socketio = SocketIO(app)
 
 pv_lookup = {}
 
+
 def pv_changed(pvname, value, **kws):
     data = {'pv': pvname, 'value': value, 'time': time.time()}
     socketio.emit('update', data, room=pvname)
+
 
 @app.route('/')
 def index():
@@ -25,6 +29,7 @@ def index():
     log = request.args.get('log') == '1'
     span = request.args.get('span')
     return render_template('index.html', pvs=pvs, log=log, span=span)
+
 
 @socketio.on('add monitor')
 def add_monitor(data):
@@ -53,6 +58,7 @@ def add_monitor(data):
     else:
         join_room(pvname)
 
+
 @socketio.on('remove monitor')
 def remove_monitor(data):
     pvname = data['pv']
@@ -70,10 +76,11 @@ def remove_monitor(data):
     try:
         remaining_monitors = len(socketio.rooms[''][pvname])
     except KeyError:
-        remaining_monitors = 0 
+        remaining_monitors = 0
     if remaining_monitors == 0 and pvname in pv_lookup:
         pv_lookup[pvname].disconnect()
         del pv_lookup[pvname]
+
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0')
